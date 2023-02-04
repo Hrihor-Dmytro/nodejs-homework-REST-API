@@ -30,6 +30,7 @@ const getContactById = async (req, res, next) => {
 const addContact = async (req, res, next) => {
   try {
     const result = await Contact.create(req.body);
+
     if (!result) {
       throw new NotFound(404);
     }
@@ -43,6 +44,8 @@ const removeContact = async (req, res, next) => {
   try {
     const { contactId } = req.params;
     const result = await Contact.findByIdAndRemove(contactId);
+    console.log(contactId);
+    console.log(result);
     if (!result) {
       return res.status(400).json({
         message: `Contact with id=${contactId} not found`,
@@ -59,9 +62,14 @@ const removeContact = async (req, res, next) => {
 const updateContact = async (req, res, next) => {
   try {
     const { contactId } = req.params;
-    const result = await Contact.findByIdAndUpdate(contactId, req.body, {
-      new: true,
-    });
+    const { name, email, phone } = req.body;
+    const result = await Contact.findByIdAndUpdate(
+      contactId,
+      { $set: { name, email, phone } },
+      {
+        new: true,
+      }
+    );
     if (!result) {
       return res.status(400).json({
         message: `Contact with id=${contactId} not found`,
