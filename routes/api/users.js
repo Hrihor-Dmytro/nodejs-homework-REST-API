@@ -14,7 +14,7 @@ const {
 
 router.get("/current", auth, getCurrent);
 router.get("/logout", auth, logout);
-router.post("/signup", signup);
-router.post("/login", login);
+router.post("/signup", passwordJoiSchema, signup);
+router.post("/login", loginJoiSchema, login);
 
 module.exports = router;
