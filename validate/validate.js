@@ -13,7 +13,7 @@ module.exports = {
     }
     next();
   },
-  passwordJoiSchema: (req, res, next) => {
+  passwordJoiValidation: (req, res, next) => {
     const schema = Joi.object({
       name: Joi.string().required(),
       email: Joi.string().required(),
@@ -25,7 +25,7 @@ module.exports = {
     }
     next();
   },
-  loginJoiSchema: (req, res, next) => {
+  loginJoiValidation: (req, res, next) => {
     const schema = Joi.object({
       password: Joi.string().min(6).required(),
       email: Joi.string().required(),

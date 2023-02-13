@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const {
-  passwordJoiSchema,
-  loginJoiSchema,
+  passwordJoiValidation,
+  loginJoiValidation,
 } = require("../../validate/validate");
 const auth = require("../../middlewares/auth");
 const {
@@ -14,7 +14,7 @@ const {
 
 router.get("/current", auth, getCurrent);
 router.get("/logout", auth, logout);
-router.post("/signup", passwordJoiSchema, signup);
-router.post("/login", loginJoiSchema, login);
+router.post("/signup", passwordJoiValidation, signup);
+router.post("/login", loginJoiValidation, login);
 
 module.exports = router;

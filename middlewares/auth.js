@@ -11,6 +11,9 @@ const auth = async (req, res, next) => {
   if (tokenType !== "Bearer") {
     throw new Unauthorized("Not authorized!");
   }
+  if (!token) {
+    throw new Unauthorized("Not authorized!");
+  }
 
   try {
     const { id } = jwt.verify(token, SECRET_KEY);
