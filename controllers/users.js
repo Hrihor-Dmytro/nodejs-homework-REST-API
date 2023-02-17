@@ -1,8 +1,14 @@
+const Jimp = require("jimp");
 const bcrypt = require("bcrypt");
+const path = require("path");
+const fs = require("fs/promises");
 const jwt = require("jsonwebtoken");
-const { User } = require("../models/users");
-const { SECRET_KEY } = process.env;
+const gravatar = require("gravatar");
 const { Conflict } = require("http-errors");
+const { SECRET_KEY } = process.env;
+const { User } = require("../models/users");
+
+const avatarsDir = path.join(__dirname, "../", "public", "avatars");
 
 const signup = async (req, res, next) => {
   try {
@@ -10,14 +16,19 @@ const signup = async (req, res, next) => {
     const user = await User.findOne({ email });
 
     if (user) {
-      // res.status(409).json({ message: "Email in use" });
       throw new Conflict(409, "Email in use");
     }
+    const url = gravatar.url(email, {
+      protocol: "http",
+      s: "250",
+    });
 
     const newUser = new User({
       email,
       password: await bcrypt.hash(password, 10),
+      avatarURL: url,
     });
+
     await newUser.save();
     res.status(201).json(newUser);
   } catch (error) {
@@ -79,9 +90,55 @@ const getCurrent = async (req, res, next) => {
   }
 };
 
+const transformAvatar = async (path) => {
+  console.log("IMAGE PASS", path);
+  const updateImg = await Jimp.read(path);
+  console.log("updateImg", updateImg);
+  await updateImg
+    .autocrop()
+    .contain(
+      250,
+      250,
+      Jimp.HORIZONTAL_ALIGN_CENTER | Jimp.VERTICAL_ALIGN_MIDDLE
+    )
+    .writeAsync(path);
+};
+
+const updateAvatar = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      throw new NotFound(400, "Bad Request. Please add your avatar image.");
+    }
+    const { path: tempUpload, filename } = req.file;
+    const { _id } = req.user;
+    const [, extention] = filename.split(".");
+
+    const newFileName = `${_id}.${extention}`;
+
+    transformAvatar(tempUpload);
+
+    const resultUpload = path.join(avatarsDir, newFileName);
+
+    await fs.rename(tempUpload, resultUpload);
+    const avatarURL = path.join("avatars", newFileName);
+
+    await User.findByIdAndUpdate(_id, { avatarURL });
+
+    res.json({
+      avatarURL,
+    });
+  } catch (error) {
+    if (req.file) {
+      await fs.unlink(req.file.tempUpload);
+    }
+    next(error);
+  }
+};
+
 module.exports = {
   signup,
   login,
   logout,
   getCurrent,
+  updateAvatar,
 };

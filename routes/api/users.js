@@ -4,17 +4,22 @@ const {
   passwordJoiValidation,
   loginJoiValidation,
 } = require("../../validate/validate");
+
 const auth = require("../../middlewares/auth");
+const upload = require("../../middlewares/upload");
+
 const {
   signup,
   logout,
   login,
   getCurrent,
+  updateAvatar,
 } = require("../../controllers/users");
 
 router.get("/current", auth, getCurrent);
 router.get("/logout", auth, logout);
 router.post("/signup", passwordJoiValidation, signup);
 router.post("/login", loginJoiValidation, login);
+router.patch("/avatars", auth, upload.single("avatar"), updateAvatar);
 
 module.exports = router;
