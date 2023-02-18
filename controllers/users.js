@@ -91,9 +91,7 @@ const getCurrent = async (req, res, next) => {
 };
 
 const transformAvatar = async (path) => {
-  console.log("IMAGE PASS", path);
   const updateImg = await Jimp.read(path);
-  console.log("updateImg", updateImg);
   await updateImg
     .autocrop()
     .contain(
@@ -111,7 +109,7 @@ const updateAvatar = async (req, res, next) => {
     }
     const { path: tempUpload, filename } = req.file;
     const { _id } = req.user;
-    const [, extention] = filename.split(".");
+    const [extention] = filename.split(".").reverse();
 
     const newFileName = `${_id}.${extention}`;
 
@@ -120,7 +118,8 @@ const updateAvatar = async (req, res, next) => {
     const resultUpload = path.join(avatarsDir, newFileName);
 
     await fs.rename(tempUpload, resultUpload);
-    const avatarURL = path.join("avatars", newFileName);
+
+    const avatarURL = path.join(avatarsDir, newFileName);
 
     await User.findByIdAndUpdate(_id, { avatarURL });
 
