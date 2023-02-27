@@ -5,15 +5,9 @@ const fs = require("fs/promises");
 const jwt = require("jsonwebtoken");
 const gravatar = require("gravatar");
 const { Conflict, BadRequest } = require("http-errors");
-
-const { SECRET_KEY, SENDGRID_API_KEY, PORT } = process.env;
-
-const sgMail = require("@sendgrid/mail");
-sgMail.setApiKey(SENDGRID_API_KEY);
-
+const sendEmail = require("../helpers/sendEmail");
 const { User } = require("../models/users");
 const { v4: uuidv4 } = require("uuid");
-
 const avatarsDir = path.join(__dirname, "../", "public", "avatars");
 
 const signup = async (req, res, next) => {
@@ -39,23 +33,7 @@ const signup = async (req, res, next) => {
 
     await newUser.save();
 
-    const msg = {
-      to: email,
-      from: "grigor_dy@ukr.net", // Use the email address or domain you verified above
-      subject: "Thanks for your registration",
-      text: "Welcome to our service",
-      html: `<a target="_blank" href="http://localhost:${PORT}/api/users/verify/${verificationToken}">Нажмите для подтверждения email</a>`,
-    };
-    await sgMail.send(msg).then(
-      () => {},
-      (error) => {
-        console.error(error);
-
-        if (error.response) {
-          console.error(error.response.body);
-        }
-      }
-    );
+    await sendEmail(email, verificationToken);
 
     res.status(201).json(newUser);
   } catch (error) {
@@ -182,15 +160,7 @@ const resendEmail = async (req, res) => {
   }
   const { verificationToken } = user;
 
-  const msg = {
-    to: email,
-    from: EMAIL_SENDER, // Use the email address or domain you verified above
-    subject: "Thanks for your registration",
-    text: "Welcome to our service",
-    html: `<a target="_blank" href="http://localhost:${PORT}/api/users/verify/${verificationToken}">Нажмите для подтверждения email</a>`,
-  };
-
-  await sgMail.send(msg);
+  await sendEmail(email, verificationToken);
 
   res.status(200).json({
     message: "Verification email sent",
