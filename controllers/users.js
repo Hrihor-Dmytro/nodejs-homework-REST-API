@@ -4,9 +4,12 @@ const path = require("path");
 const fs = require("fs/promises");
 const jwt = require("jsonwebtoken");
 const gravatar = require("gravatar");
-const { Conflict } = require("http-errors");
-const { SECRET_KEY } = process.env;
+const { Conflict, BadRequest } = require("http-errors");
+const { SECRET_KEY, TEST_KEY, PORT, EMAIL_SENDER } = process.env;
+const sgMail = require("@sendgrid/mail");
+
 const { User } = require("../models/users");
+const { v4: uuidv4 } = require("uuid");
 
 const avatarsDir = path.join(__dirname, "../", "public", "avatars");
 
@@ -22,14 +25,28 @@ const signup = async (req, res, next) => {
       protocol: "http",
       s: "250",
     });
+    const verificationToken = uuidv4();
 
     const newUser = new User({
       email,
       password: await bcrypt.hash(password, 10),
       avatarURL: url,
+      verificationToken,
     });
 
     await newUser.save();
+
+    sgMail.setApiKey(TEST_KEY);
+
+    const msg = {
+      to: email,
+      from: "poro6o4ek@gmail.com", // Use the email address or domain you verified above
+      subject: "Thanks for your registration",
+      text: "Welcome to our service",
+      html: `<a target="_blank" href="http://localhost:${PORT}/api/users/verify/${verificationToken}">Нажмите для подтверждения email</a>`,
+    };
+    await sgMail.send(msg);
+
     res.status(201).json(newUser);
   } catch (error) {
     next(error);
@@ -116,13 +133,8 @@ const updateAvatar = async (req, res, next) => {
     transformAvatar(tempUpload);
 
     const resultUpload = path.join(avatarsDir, newFileName);
-
     await fs.rename(tempUpload, resultUpload);
-
-    // const avatarURL = path.join("avatars", newFileName);
-
-    const avatarURL = `http://localhost:3000/avatars/${newFileName}`;
-
+    const avatarURL = `http://localhost:${PORT}/avatars/${newFileName}`;
     await User.findByIdAndUpdate(_id, { avatarURL });
 
     res.json({
@@ -136,10 +148,51 @@ const updateAvatar = async (req, res, next) => {
   }
 };
 
+const emailChecking = async (req, res) => {
+  const { verificationToken } = req.params;
+  const user = await User.findOne({ verificationToken });
+  if (!user) {
+    throw NotFound();
+  }
+  await User.findByIdAndUpdate(user._id, {
+    veryfy: true,
+    verificationToken: null,
+  });
+  res.json({
+    massege: "Verification successful",
+  });
+};
+
+const resendEmail = async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+
+  if (user.verify) {
+    throw new BadRequest("Verification has already been passed");
+  }
+  const { verificationToken } = user;
+
+  const msg = {
+    to: email,
+    from: "poro6o4ek@gmail.com", // Use the email address or domain you verified above
+    subject: "Thanks for your registration",
+    text: "Welcome to our service",
+    html: `<a target="_blank" href="http://localhost:${PORT}/api/users/verify/${verificationToken}">Нажмите для подтверждения email</a>`,
+  };
+
+  await sgMail.send(msg);
+
+  res.status(200).json({
+    message: "Verification email sent",
+  });
+};
+
 module.exports = {
   signup,
   login,
   logout,
   getCurrent,
   updateAvatar,
+  emailChecking,
+  resendEmail,
 };
